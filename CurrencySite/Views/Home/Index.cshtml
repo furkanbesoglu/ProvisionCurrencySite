@@ -1,0 +1,128 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<h1>Döviz Kurları</h1>
+
+<form action="javascript:void(0);" method="POST" onsubmit="addItem()">
+    <input type="text" id="add-name" placeholder="New to-do">
+    <input type="submit" value="Add">
+</form>
+
+<hr class="my-5" />
+
+<div id="editForm">
+    <h3>Edit</h3>
+    <form action="javascript:void(0);" onsubmit="updateItem()">
+        <input type="hidden" id="edit-id">
+        <input type="checkbox" id="edit-isComplete">
+        <input type="text" id="edit-name">
+        <input type="submit" value="Save">
+        <a onclick="closeInput()" aria-label="Close">&#10006;</a>
+    </form>
+</div>
+
+<p id="counter"></p>
+
+<table class="table table-bordered">
+    <tr>
+        <th>Is Complete?</th>
+        <th>Name</th>
+        <th></th>
+        <th></th>
+    </tr>
+    <tbody id="todos"></tbody>
+</table>
+
+
+
+<div class="my-5">
+    <input id="text" type="text" placeholder="Currency Name" />
+    <button id="btn" class="btn btn-dark text-white">Search</button>
+</div>
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+@section Scripts{
+    <script src="js/site.js" asp-append-version="true"></script>
+    <script type="text/javascript">
+        getItems();
+    </script>
+
+    <script>
+        $('#btn').click(function () {
+            var text = $('#text').val();
+
+            let endpoint = 'http://localhost:50369/api/Exchange/GetToExchange'
+            let apiKey = text
+            var datas;
+
+            $.ajax({
+                url: endpoint + "/" + apiKey,
+                contentType: "application/json",
+                dataType: 'json',
+                success: function (result) {
+                    console.log(result);
+                    datas = result;
+                    console.log(datas);
+                }
+            });
+
+            // set the dimensions and margins of the graph
+            var margin = { top: 10, right: 30, bottom: 30, left: 60 },
+                width = 460 - margin.left - margin.right,
+                height = 400 - margin.top - margin.bottom;
+
+            // append the svg object to the body of the page
+            var svg = d3.select("#my_dataviz")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+
+            //Read the data
+            d3.csv("http://localhost:50369/api/Exchange/GetToExchange" + "/" + text,
+
+                // When reading the csv, I must format variables:
+                function (d) {
+                    return { date: d3.timeParse("%Y-%m-%d")(d.date), value: d.value }
+                },
+
+                // Now I can use this dataset:
+                function (data) {
+
+                    // Add X axis --> it is a date format
+                    var x = d3.scaleTime()
+                        .domain(d3.extent(data, function (d) { return d.date; }))
+                        .range([0, width]);
+                    svg.append("g")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(d3.axisBottom(x));
+
+                    // Add Y axis
+                    var y = d3.scaleLinear()
+                        .domain([0, d3.max(data, function (d) { return +d.value; })])
+                        .range([height, 0]);
+                    svg.append("g")
+                        .call(d3.axisLeft(y));
+
+                    // Add the line
+                    svg.append("path")
+                        .datum(data)
+                        .attr("fill", "none")
+                        .attr("stroke", "steelblue")
+                        .attr("stroke-width", 1.5)
+                        .attr("d", d3.line()
+                            .x(function (d) { return x(d.date) })
+                            .y(function (d) { return y(d.value) })
+                        )
+
+                })
+
+        });
+    </script>
+
+
+}
